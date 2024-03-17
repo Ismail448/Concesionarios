@@ -1,5 +1,6 @@
 package com.proyecto.concesionarios.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,9 +21,11 @@ public class Marca {
     private String telefono;
     private String anyoFundacion;
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "marcas")
     private List<Concesionario> concesionarios;
 
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "marca_modelo",
             joinColumns = @JoinColumn(name = "id_marca", referencedColumnName = "id"),
