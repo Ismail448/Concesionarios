@@ -20,7 +20,7 @@ public class ConcesionarioRestController {
     @Autowired
     private ConcesionarioRepository concesionarioRepository;
 
-    // RF1.1: Registrar nuevos concesionarios
+    //Registrar nuevos concesionarios
     @PostMapping
     public ResponseEntity<Concesionario> registrarConcesionario(@RequestBody Concesionario concesionario) {
         // Validar que al menos dos atributos obligatorios estén presentes
@@ -32,7 +32,7 @@ public class ConcesionarioRestController {
         return ResponseEntity.ok(savedConcesionario);
     }
 
-    // RF1.2: Actualizar información de concesionarios existentes
+    //Actualizar información de concesionarios existentes
     @PutMapping("/{id}")
     public ResponseEntity<Concesionario> actualizarConcesionario(@PathVariable Long id, @RequestBody Concesionario concesionario) {
         Optional<Concesionario> optionalConcesionario = concesionarioRepository.findById(id);
@@ -52,7 +52,7 @@ public class ConcesionarioRestController {
         return ResponseEntity.ok(updatedConcesionario);
     }
 
-    // RF1.3: Eliminar concesionarios
+    //Eliminar concesionarios
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarConcesionario(@PathVariable Long id) {
         if (!concesionarioRepository.existsById(id)) {
@@ -62,7 +62,7 @@ public class ConcesionarioRestController {
         return ResponseEntity.noContent().build();
     }
 
-    // RF1.4: Consultar concesionarios disponibles, filtrando por cualquiera de sus atributos
+    //Consultar concesionarios disponibles, filtrando por cualquiera de sus atributos
     @GetMapping
     public ResponseEntity<List<Concesionario>> buscarConcesionarios(
             @RequestParam(required = false) String nombre,
@@ -88,7 +88,7 @@ public class ConcesionarioRestController {
     }
 
 
-    // RF1.5: Devolver resultados de forma paginada
+    //Devolver resultados de forma paginada
     @GetMapping("/paginado")
     public ResponseEntity<Page<Concesionario>> buscarConcesionariosPaginados(
             @RequestParam(defaultValue = "0") int page,
