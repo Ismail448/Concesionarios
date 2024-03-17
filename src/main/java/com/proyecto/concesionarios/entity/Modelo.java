@@ -1,5 +1,6 @@
 package com.proyecto.concesionarios.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,9 +18,11 @@ public class Modelo {
     private String tipoCoche;
     private int anyoLanzamiento;
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "modelos", fetch = FetchType.LAZY)
     private List<Marca> marcas;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Coche> coches;
 }

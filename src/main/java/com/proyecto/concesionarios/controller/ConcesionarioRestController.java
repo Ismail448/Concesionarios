@@ -2,7 +2,6 @@ package com.proyecto.concesionarios.controller;
 
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
-import com.proyecto.concesionarios.service.ConcesionarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
