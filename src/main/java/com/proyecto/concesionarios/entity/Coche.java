@@ -1,6 +1,7 @@
 package com.proyecto.concesionarios.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
@@ -16,7 +17,7 @@ public class Coche {
     private double precio;
     private String fechaFabricacion;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_modelo")
     private Modelo modelo;
 

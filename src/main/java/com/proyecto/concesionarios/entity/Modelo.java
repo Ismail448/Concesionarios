@@ -4,22 +4,22 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
 @Entity
 public class Modelo {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nombre;
     private String tipoCoche;
     private int anyoLanzamiento;
 
-    @ManyToOne
-    @JoinColumn(name = "idMarca")
-    private Marca marca;
+    @ManyToMany(mappedBy = "modelos", fetch = FetchType.LAZY)
+    private List<Marca> marcas;
 
-    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL)
-    private Set<Coche> coches = new HashSet<>();
+    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Coche> coches;
 }

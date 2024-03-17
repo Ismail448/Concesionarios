@@ -1,13 +1,16 @@
 package com.proyecto.concesionarios.controller;
 
 import com.proyecto.concesionarios.entity.Concesionario;
+import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import com.proyecto.concesionarios.service.ConcesionarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Optional;
 
 
 @RestController
@@ -15,46 +18,84 @@ import java.util.List;
 public class ConcesionarioRestController {
 
     @Autowired
-    private ConcesionarioService concesionarioService;
-    // Registrar nuevos concesionarios
+    private ConcesionarioRepository concesionarioRepository;
+
+    // RF1.1: Registrar nuevos concesionarios
     @PostMapping
-    public Concesionario registrarConcesionario(@RequestBody Concesionario concesionario) {
+    public ResponseEntity<Concesionario> registrarConcesionario(@RequestBody Concesionario concesionario) {
         // Validar que al menos dos atributos obligatorios estén presentes
         if (concesionario.getNombre() == null || concesionario.getDireccion() == null) {
             // Manejo de error si no se cumplen los requisitos
-            // Aquí puedes lanzar una excepción personalizada o retornar un mensaje de error
-            throw new IllegalArgumentException("Se requieren al menos el nombre y la dirección del concesionario.");
+            return ResponseEntity.badRequest().build();
         }
-        return concesionarioService.save(concesionario);
+        Concesionario savedConcesionario = concesionarioRepository.save(concesionario);
+        return ResponseEntity.ok(savedConcesionario);
     }
 
-    //Actualizar información de concesionarios existentes
+    // RF1.2: Actualizar información de concesionarios existentes
     @PutMapping("/{id}")
-    public Concesionario actualizarConcesionario(@PathVariable Long id, @RequestBody Concesionario newConcesionario) {
-        return concesionarioService.updateConcesionario(id, newConcesionario);
+    public ResponseEntity<Concesionario> actualizarConcesionario(@PathVariable Long id, @RequestBody Concesionario concesionario) {
+        Optional<Concesionario> optionalConcesionario = concesionarioRepository.findById(id);
+        if (!optionalConcesionario.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        Concesionario existingConcesionario = optionalConcesionario.get();
+        // Actualizar la información del concesionario
+        existingConcesionario.setNombre(concesionario.getNombre());
+        existingConcesionario.setDireccion(concesionario.getDireccion());
+        existingConcesionario.setTelefono(concesionario.getTelefono());
+        existingConcesionario.setEmail(concesionario.getEmail());
+        existingConcesionario.setSitioWeb(concesionario.getSitioWeb());
+        // Actualizar otros campos según sea necesario
+
+        Concesionario updatedConcesionario = concesionarioRepository.save(existingConcesionario);
+        return ResponseEntity.ok(updatedConcesionario);
     }
 
-    //Eliminar concesionarios
+    // RF1.3: Eliminar concesionarios
     @DeleteMapping("/{id}")
-    public void eliminarConcesionario(@PathVariable Long id) {
-        concesionarioService.deleteConcesionario(id);
+    public ResponseEntity<Void> eliminarConcesionario(@PathVariable Long id) {
+        if (!concesionarioRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        concesionarioRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
-    //Consultar concesionarios disponibles, filtrando por cualquiera de sus atributos
+    // RF1.4: Consultar concesionarios disponibles, filtrando por cualquiera de sus atributos
     @GetMapping
-    public List<Concesionario> buscarConcesionarios(@RequestParam(required = false) String nombre,
-                                                    @RequestParam(required = false) String direccion,
-                                                    @RequestParam(required = false) String telefono,
-                                                    @RequestParam(required = false) String email,
-                                                    @RequestParam(required = false) String sitioWeb) {
-        return concesionarioService.buscarConcesionarios(nombre, direccion, telefono, email, sitioWeb);
+    public ResponseEntity<List<Concesionario>> buscarConcesionarios(
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String direccion,
+            @RequestParam(required = false) String telefono,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String sitioWeb) {
+
+        List<Concesionario> concesionarios;
+        if (nombre != null || direccion != null || telefono != null || email != null || sitioWeb != null) {
+            concesionarios = concesionarioRepository.findByNombreContainingAndDireccionContainingAndTelefonoContainingAndEmailContainingAndSitioWebContaining(
+                    nombre != null ? nombre : "",
+                    direccion != null ? direccion : "",
+                    telefono != null ? telefono : "",
+                    email != null ? email : "",
+                    sitioWeb != null ? sitioWeb : ""
+            );
+        } else {
+            concesionarios = concesionarioRepository.findAll();
+        }
+
+        return ResponseEntity.ok(concesionarios);
     }
 
-    //Devolver resultados de forma paginada
+
+    // RF1.5: Devolver resultados de forma paginada
     @GetMapping("/paginado")
-    public Page<Concesionario> buscarConcesionariosPaginados(@RequestParam(defaultValue = "0") int page,
-                                                             @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<Page<Concesionario>> buscarConcesionariosPaginados(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
         Pageable pageable = PageRequest.of(page, size);
-        return concesionarioService.buscarConcesionariosPaginados(pageable);
+        Page<Concesionario> pageOfConcesionarios = concesionarioRepository.findAll(pageable);
+        return ResponseEntity.ok(pageOfConcesionarios);
     }
 }

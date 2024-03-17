@@ -9,9 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface ConcesionarioRepository extends JpaRepository<Concesionario, Long> {
-    public ArrayList<Concesionario> findAll();
-
-    public Concesionario save(Concesionario concesionario);
     List<Concesionario> findByNombreContainingAndDireccionContainingAndTelefonoContainingAndEmailContainingAndSitioWebContaining(
             String nombre,
             String direccion,
@@ -19,8 +16,6 @@ public interface ConcesionarioRepository extends JpaRepository<Concesionario, Lo
             String email,
             String sitioWeb
     );
-
-    Page<Concesionario> findAll(Pageable pageable);
 }
 
 

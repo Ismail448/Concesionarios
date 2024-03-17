@@ -44,8 +44,9 @@ public class ConcesionarioService {
         return concesionarioRepository.findByNombreContainingAndDireccionContainingAndTelefonoContainingAndEmailContainingAndSitioWebContaining(nombre, direccion, telefono, email, sitioWeb);
     }
 
-    // Método para consultar concesionarios de forma paginada (RF1.5)
+    // Método para consultar concesionarios de forma paginada
     public Page<Concesionario> buscarConcesionariosPaginados(Pageable pageable) {
         return concesionarioRepository.findAll(pageable);
     }
+
 }

@@ -1,16 +1,18 @@
 package com.proyecto.concesionarios.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
 @Entity
 public class Marca {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nombre;
     private String paisOrigen;
@@ -19,5 +21,12 @@ public class Marca {
     private String anyoFundacion;
 
     @ManyToMany(mappedBy = "marcas")
-    private Set<Concesionario> concesionarios = new HashSet<>();
+    private List<Concesionario> concesionarios;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "marca_modelo",
+            joinColumns = @JoinColumn(name = "id_marca", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "i_modelo", referencedColumnName = "id"))
+    private List<Modelo> modelos;
+
 }
