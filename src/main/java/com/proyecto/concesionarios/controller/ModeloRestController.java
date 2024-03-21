@@ -1,7 +1,10 @@
 package com.proyecto.concesionarios.controller;
 
 import com.proyecto.concesionarios.entity.Concesionario;
+import com.proyecto.concesionarios.entity.Marca;
 import com.proyecto.concesionarios.entity.Modelo;
+import com.proyecto.concesionarios.repository.CocheRepository;
+import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -20,19 +23,53 @@ public class ModeloRestController {
     @Autowired
     ModeloRepository modeloRepository;
 
-    @PostMapping
-    public ResponseEntity<Modelo> registrarModelo(@RequestBody Modelo modelo) {
+    @Autowired
+    CocheRepository cocheRepository;
+
+    @Autowired
+    MarcaRepository marcaRepository;
+
+    /**@PostMapping
+    public ResponseEntity<?> registrarModelo(@RequestBody Modelo modelo) {
         // Validar que al menos dos atributos obligatorios estén presentes
         if (modelo.getNombre() == null || modelo.getTipoCoche() == null) {
             // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Los campos 'nombre' y 'tipo de coche' son obligatorios.");
         }
         Modelo savedModelo = modeloRepository.save(modelo);
         return ResponseEntity.ok(savedModelo);
+    }*/
+
+    @PostMapping
+    public ResponseEntity<String> registrarModelo(
+            @RequestParam String nombre,
+            @RequestParam String tipoCoche,
+            @RequestParam int anyoLanzamiento,
+            @RequestParam(required = false) List<Long> marcasIds) {
+
+        Modelo nuevoModelo = new Modelo();
+        nuevoModelo.setNombre(nombre);
+        nuevoModelo.setTipoCoche(tipoCoche);
+        nuevoModelo.setAnyoLanzamiento(anyoLanzamiento);
+
+        if (marcasIds != null && !marcasIds.isEmpty()) {
+            List<Marca> marcas = marcaRepository.findAllById(marcasIds);
+            // Solo puedes asignar una marca a un modelo, por lo tanto, debes seleccionar una de la lista
+            if (!marcas.isEmpty()) {
+                nuevoModelo.setMarca(marcas.get(0));
+            } else {
+                // Manejar la situación en la que no se encuentren marcas
+                return ResponseEntity.badRequest().body("No se encontraron marcas con los IDs proporcionados");
+            }
+        }
+
+        modeloRepository.save(nuevoModelo);
+
+        return ResponseEntity.ok("Modelo registrado correctamente");
     }
 
     //Actualizar información de concesionarios existentes
-    @PutMapping("/{id}")
+    /**@PutMapping("/{id}")
     public ResponseEntity<Modelo> actualizarModelo(@PathVariable Long id, @RequestBody Modelo modelo) {
         Optional<Modelo> optionalModelo = modeloRepository.findById(id);
         if (!optionalModelo.isPresent()) {
@@ -47,7 +84,42 @@ public class ModeloRestController {
 
         Modelo updatedModelo = modeloRepository.save(existingModelo);
         return ResponseEntity.ok(updatedModelo);
+    }*/
+
+    @PutMapping("{id}")
+    public ResponseEntity<String> actualizarModelo(
+            @PathVariable Long id,
+            @RequestParam String nombre,
+            @RequestParam String tipoCoche,
+            @RequestParam int anyoLanzamiento,
+            @RequestParam(required = false) Long marcaId) {
+
+        Optional<Modelo> optionalModelo = modeloRepository.findById(id);
+        if (!optionalModelo.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Modelo modelo = optionalModelo.get();
+        modelo.setNombre(nombre);
+        modelo.setTipoCoche(tipoCoche);
+        modelo.setAnyoLanzamiento(anyoLanzamiento);
+
+        if (marcaId != null) {
+            Optional<Marca> marcaOptional = marcaRepository.findById(marcaId);
+            if (marcaOptional.isPresent()) {
+                modelo.setMarca(marcaOptional.get());
+            } else {
+                return ResponseEntity.badRequest().body("No se encontró una marca con el ID proporcionado: " + marcaId);
+            }
+        } else {
+            modelo.setMarca(null); // Si no se proporciona un nuevo ID de marca, eliminamos la asociación existente
+        }
+
+        modeloRepository.save(modelo);
+
+        return ResponseEntity.ok("Modelo actualizado correctamente");
     }
+
 
     //Eliminar concesionarios
     @DeleteMapping("/{id}")

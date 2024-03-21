@@ -11,7 +11,7 @@ public interface CocheRepository extends JpaRepository<Coche, Long> {
     List<Coche> findCocheByColorContainingAndMatriculaContainingAndPrecioAndFechaFabricacion(
             String color,
             String matricula,
-            Double precio,
+            Float precio,
             LocalDate fechaFabricacion
     );
 }

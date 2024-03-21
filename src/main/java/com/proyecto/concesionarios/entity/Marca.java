@@ -1,16 +1,19 @@
 package com.proyecto.concesionarios.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Data
 @Entity
+@NoArgsConstructor
+@AllArgsConstructor
 public class Marca {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,15 +24,15 @@ public class Marca {
     private String telefono;
     private String anyoFundacion;
 
+    //@JsonIgnoreProperties({"marcas", "modelos"})
     @JsonIgnore
+    //@JsonBackReference
     @ManyToMany(mappedBy = "marcas")
     private List<Concesionario> concesionarios;
 
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "marca_modelo",
-            joinColumns = @JoinColumn(name = "id_marca", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name = "i_modelo", referencedColumnName = "id"))
+    @JsonIgnoreProperties("marca")
+    //@JsonIgnore
+    @OneToMany(mappedBy = "marca", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Modelo> modelos;
 
 }

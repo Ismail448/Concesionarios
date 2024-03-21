@@ -1,8 +1,10 @@
 package com.proyecto.concesionarios.controller;
 
 
+import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
+import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -13,7 +15,11 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @RestController
 @RequestMapping("/marcas")
@@ -22,17 +28,66 @@ public class MarcaRestController {
     @Autowired
     private MarcaRepository marcaRepository;
 
+
     // Registrar nuevas marcas
-    @PostMapping
-    public ResponseEntity<Marca> registrarMarca(@Valid @RequestBody Marca marca) {
+    /**@PostMapping
+    public ResponseEntity<?> registrarMarca(@RequestBody Marca marca) {
         // Validar que al menos dos atributos obligatorios estén presentes
         if (marca.getNombre() == null || marca.getPaisOrigen() == null) {
             // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Los campos 'nombre' y 'pais' son obligatorios.");
         }
         Marca savedMarca = marcaRepository.save(marca);
-        return ResponseEntity.status(201).body(savedMarca);
+        return ResponseEntity.ok(savedMarca);
+    }*/
+    @PostMapping
+    public ResponseEntity<String> registrarMarca(
+            @RequestParam String nombre,
+            @RequestParam String paisOrigen,
+            @RequestParam String sitioWeb,
+            @RequestParam String telefono,
+            @RequestParam String anyoFundacion,
+            @RequestParam(required = false) String nombreModelo,
+            @RequestParam(required = false) String tipoCoche,
+            @RequestParam(required = false) int anyoLanzamiento,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String matricula,
+            @RequestParam(required = false) float precio,
+            @RequestParam(required = false) String fechaFabricacion) {
+
+        Marca nuevaMarca = new Marca();
+        nuevaMarca.setNombre(nombre);
+        nuevaMarca.setPaisOrigen(paisOrigen);
+        nuevaMarca.setSitioWeb(sitioWeb);
+        nuevaMarca.setTelefono(telefono);
+        nuevaMarca.setAnyoFundacion(anyoFundacion);
+
+        if (nombreModelo != null && tipoCoche != null && anyoLanzamiento != 0) {
+            Modelo nuevoModelo = new Modelo();
+            nuevoModelo.setNombre(nombreModelo);
+            nuevoModelo.setTipoCoche(tipoCoche);
+            nuevoModelo.setAnyoLanzamiento(anyoLanzamiento);
+            nuevoModelo.setMarca(nuevaMarca);
+
+            if (color != null && matricula != null && precio != 0 && fechaFabricacion != null) {
+                Coche nuevoCoche = new Coche();
+                nuevoCoche.setColor(color);
+                nuevoCoche.setMatricula(matricula);
+                nuevoCoche.setPrecio(precio);
+                nuevoCoche.setFechaFabricacion(LocalDate.parse(fechaFabricacion));
+
+                nuevoCoche.setModelo(nuevoModelo);
+                nuevoModelo.setCoches(Collections.singletonList(nuevoCoche));
+            }
+
+            nuevaMarca.setModelos(Collections.singletonList(nuevoModelo));
+        }
+
+        marcaRepository.save(nuevaMarca);
+
+        return ResponseEntity.ok("Marca registrada correctamente");
     }
+
 
     // Actualizar información de marcas existentes
     @PutMapping("/{id}")

@@ -1,15 +1,18 @@
 package com.proyecto.concesionarios.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-
 import java.time.LocalDate;
 
 @Data
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
 public class Coche {
 
     @Id
@@ -18,14 +21,15 @@ public class Coche {
 
     private String color;
     private String matricula;
-    private double precio;
+    private float precio;
     @Temporal(TemporalType.DATE)
     @DateTimeFormat(pattern = "dd/MM/YYYY")
     private LocalDate fechaFabricacion;
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_modelo")
+    //@JsonIgnoreProperties("coches")
+    //@JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "modelo_id")
     private Modelo modelo;
 
 }

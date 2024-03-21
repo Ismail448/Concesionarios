@@ -1,15 +1,18 @@
 package com.proyecto.concesionarios.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Data
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
 public class Modelo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,11 +21,14 @@ public class Modelo {
     private String tipoCoche;
     private int anyoLanzamiento;
 
-    @JsonIgnore
-    @ManyToMany(mappedBy = "modelos", fetch = FetchType.LAZY)
-    private List<Marca> marcas;
+    //@JsonIgnoreProperties("modelos")
+    //@JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "marca_id")
+    private Marca marca;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties("modelo")
+    //@JsonIgnore
+    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Coche> coches;
 }
