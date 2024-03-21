@@ -1,6 +1,8 @@
 package com.proyecto.concesionarios.controller;
 
-import com.proyecto.concesionarios.entity.Concesionario;
+import com.proyecto.concesionarios.dto.CocheDTO;
+import com.proyecto.concesionarios.dto.ModeloDTO;
+import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Marca;
 import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
@@ -29,16 +31,42 @@ public class ModeloRestController {
     @Autowired
     MarcaRepository marcaRepository;
 
-    /**@PostMapping
-    public ResponseEntity<?> registrarModelo(@RequestBody Modelo modelo) {
-        // Validar que al menos dos atributos obligatorios estén presentes
-        if (modelo.getNombre() == null || modelo.getTipoCoche() == null) {
-            // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().body("Los campos 'nombre' y 'tipo de coche' son obligatorios.");
+    @PostMapping("modeloJson")
+    public ResponseEntity<Object> registrarModeloJson(@RequestBody ModeloDTO modeloDTO) {
+        // Validar que al menos dos atributos sean obligatorios
+        if (modeloDTO.getNombre() == null || modeloDTO.getNombre().isEmpty() ||
+                modeloDTO.getTipoCoche() == null || modeloDTO.getTipoCoche().isEmpty()) {
+            return ResponseEntity.badRequest().body("{\"error\": \"Se requieren al menos dos atributos obligatorios para el modelo.\"}");
         }
-        Modelo savedModelo = modeloRepository.save(modelo);
-        return ResponseEntity.ok(savedModelo);
-    }*/
+
+        Modelo nuevoModelo = new Modelo();
+        nuevoModelo.setNombre(modeloDTO.getNombre());
+        nuevoModelo.setTipoCoche(modeloDTO.getTipoCoche());
+        nuevoModelo.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+
+        // Guardar el modelo primero
+        modeloRepository.save(nuevoModelo);
+
+        // Verificar si se deben registrar coches para este modelo
+        if (modeloDTO.getCoches() != null) {
+            for (CocheDTO cocheDTO : modeloDTO.getCoches()) {
+                // Validar que al menos dos atributos sean obligatorios para el coche
+                if (cocheDTO.getColor() == null || cocheDTO.getColor().isEmpty() ||
+                        cocheDTO.getMatricula() == null || cocheDTO.getMatricula().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada coche.");
+                }
+                Coche coche = new Coche();
+                coche.setColor(cocheDTO.getColor());
+                coche.setMatricula(cocheDTO.getMatricula());
+                coche.setPrecio(cocheDTO.getPrecio());
+                coche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+                coche.setModelo(nuevoModelo);
+                cocheRepository.save(coche);
+            }
+        }
+
+        return ResponseEntity.ok("Modelo registrado correctamente con ID: " + nuevoModelo.getId() );
+    }
 
     @PostMapping
     public ResponseEntity<String> registrarModelo(
@@ -69,22 +97,33 @@ public class ModeloRestController {
     }
 
     //Actualizar información de concesionarios existentes
-    /**@PutMapping("/{id}")
-    public ResponseEntity<Modelo> actualizarModelo(@PathVariable Long id, @RequestBody Modelo modelo) {
+    @PutMapping("modeloJson/{id}")
+    public ResponseEntity<Object> actualizarModeloJson(@PathVariable Long id, @RequestBody ModeloDTO modeloDTO) {
+        // Validar que el modelo exista
         Optional<Modelo> optionalModelo = modeloRepository.findById(id);
         if (!optionalModelo.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        Modelo existingModelo = optionalModelo.get();
-        // Actualizar la información del concesionario
-        existingModelo.setNombre(modelo.getNombre());
-        existingModelo.setTipoCoche(modelo.getTipoCoche());
-        existingModelo.setAnyoLanzamiento(modelo.getAnyoLanzamiento());
-        // Actualizar otros campos según sea necesario
 
-        Modelo updatedModelo = modeloRepository.save(existingModelo);
-        return ResponseEntity.ok(updatedModelo);
-    }*/
+        Modelo modeloExistente = optionalModelo.get();
+
+        // Actualizar los atributos del modelo si se proporcionan
+        if (modeloDTO.getNombre() != null && !modeloDTO.getNombre().isEmpty()) {
+            modeloExistente.setNombre(modeloDTO.getNombre());
+        }
+        if (modeloDTO.getTipoCoche() != null && !modeloDTO.getTipoCoche().isEmpty()) {
+            modeloExistente.setTipoCoche(modeloDTO.getTipoCoche());
+        }
+        if (modeloDTO.getAnyoLanzamiento() != null) {
+            modeloExistente.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+        }
+
+        // Guardar el modelo actualizado
+        modeloRepository.save(modeloExistente);
+
+        // Devolver una respuesta con el modelo actualizado
+        return ResponseEntity.ok("Modelo modificado correctamente.");
+    }
 
     @PutMapping("{id}")
     public ResponseEntity<String> actualizarModelo(
@@ -129,12 +168,12 @@ public class ModeloRestController {
 
     //Eliminar concesionarios
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarModelo(@PathVariable Long id) {
+    public ResponseEntity<String> eliminarModelo(@PathVariable Long id) {
         if (!modeloRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.ok("ID no encontrado, introduzca uno valido");
         }
         modeloRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("Modelo con ID " + id + " eliminado correctamente");
     }
 
     //Consultar concesionarios disponibles, filtrando por cualquiera de sus atributos
