@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class ConcesionarioDTO {
-    private int id;
+    private Long id;
     private String nombre;
     private String direccion;
     private String telefono;

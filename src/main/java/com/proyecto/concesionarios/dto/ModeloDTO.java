@@ -6,10 +6,10 @@ import java.util.List;
 
 @Data
 public class ModeloDTO {
-    private int id;
+    private Long id;
     private String nombre;
     private String tipoCoche;
-    private int anyoLanzamiento;
+    private Integer anyoLanzamiento;
     private Long marcaId;
     private List<CocheDTO> coches;
 }

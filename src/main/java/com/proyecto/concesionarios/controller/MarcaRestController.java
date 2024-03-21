@@ -1,11 +1,16 @@
 package com.proyecto.concesionarios.controller;
 
 
+import com.proyecto.concesionarios.dto.CocheDTO;
+import com.proyecto.concesionarios.dto.MarcaDTO;
+import com.proyecto.concesionarios.dto.ModeloDTO;
 import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
 import com.proyecto.concesionarios.entity.Modelo;
+import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
+import com.proyecto.concesionarios.repository.ModeloRepository;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +23,7 @@ import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
@@ -28,18 +34,68 @@ public class MarcaRestController {
     @Autowired
     private MarcaRepository marcaRepository;
 
+    @Autowired
+    private ModeloRepository modeloRepository;
 
-    // Registrar nuevas marcas
-    /**@PostMapping
-    public ResponseEntity<?> registrarMarca(@RequestBody Marca marca) {
-        // Validar que al menos dos atributos obligatorios estén presentes
-        if (marca.getNombre() == null || marca.getPaisOrigen() == null) {
-            // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().body("Los campos 'nombre' y 'pais' son obligatorios.");
+    @Autowired
+    private CocheRepository cocheRepository;
+
+    // Registrar nuevas marcas y posibilidad de registrar modelos y coches tambien
+    @PostMapping("MarcaJson")
+    public ResponseEntity<String> registrarMarcaJson(@RequestBody MarcaDTO marcaDTO) {
+        // Validar que al menos dos atributos sean obligatorios para la marca
+        if (marcaDTO.getNombre() == null || marcaDTO.getNombre().isEmpty() ||
+                marcaDTO.getPaisOrigen() == null || marcaDTO.getPaisOrigen().isEmpty()) {
+            return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para la marca.");
         }
+
+        Marca marca = new Marca();
+        marca.setNombre(marcaDTO.getNombre());
+        marca.setPaisOrigen(marcaDTO.getPaisOrigen());
+        marca.setSitioWeb(marcaDTO.getSitioWeb());
+        marca.setTelefono(marcaDTO.getTelefono());
+        marca.setAnyoFundacion(marcaDTO.getAnyoFundacion());
+
+        // Guardar la marca
         Marca savedMarca = marcaRepository.save(marca);
-        return ResponseEntity.ok(savedMarca);
-    }*/
+
+        // Verificar si se deben registrar modelos para esta marca
+        if (marcaDTO.getModelos() != null) {
+            for (ModeloDTO modeloDTO : marcaDTO.getModelos()) {
+                // Validar que al menos dos atributos sean obligatorios para el modelo
+                if (modeloDTO.getNombre() == null || modeloDTO.getNombre().isEmpty() ||
+                        modeloDTO.getTipoCoche() == null || modeloDTO.getTipoCoche().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para el modelo.");
+                }
+                Modelo modelo = new Modelo();
+                modelo.setNombre(modeloDTO.getNombre());
+                modelo.setTipoCoche(modeloDTO.getTipoCoche());
+                modelo.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+                modelo.setMarca(savedMarca);
+                modeloRepository.save(modelo);
+
+                // Verificar si se deben registrar coches para este modelo
+                if (modeloDTO.getCoches() != null) {
+                    for (CocheDTO cocheDTO : modeloDTO.getCoches()) {
+                        // Validar que al menos dos atributos sean obligatorios para el coche
+                        if (cocheDTO.getColor() == null || cocheDTO.getColor().isEmpty() ||
+                                cocheDTO.getMatricula() == null || cocheDTO.getMatricula().isEmpty()) {
+                            return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada coche.");
+                        }
+                        Coche coche = new Coche();
+                        coche.setColor(cocheDTO.getColor());
+                        coche.setMatricula(cocheDTO.getMatricula());
+                        coche.setPrecio(cocheDTO.getPrecio());
+                        coche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+                        coche.setModelo(modelo);
+                        cocheRepository.save(coche);
+                    }
+                }
+            }
+        }
+
+        return ResponseEntity.ok("Marca registrada correctamente.");
+    }
     @PostMapping
     public ResponseEntity<String> registrarMarca(
             @RequestParam String nombre,
@@ -88,6 +144,116 @@ public class MarcaRestController {
         return ResponseEntity.ok("Marca registrada correctamente");
     }
 
+
+    @PutMapping("/MarcaJson/{id}")
+    public ResponseEntity<String> actualizarMarcaJson(@PathVariable Long id, @RequestBody MarcaDTO marcaDTO) {
+        // Verificar si existe la marca con el ID proporcionado
+        Optional<Marca> optionalMarca = marcaRepository.findById(id);
+        if (optionalMarca.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Marca marca = optionalMarca.get();
+
+        // Actualizar los atributos obligatorios de la marca
+        if (marcaDTO.getNombre() != null && !marcaDTO.getNombre().isEmpty()) {
+            marca.setNombre(marcaDTO.getNombre());
+        }
+        if (marcaDTO.getPaisOrigen() != null && !marcaDTO.getPaisOrigen().isEmpty()) {
+            marca.setPaisOrigen(marcaDTO.getPaisOrigen());
+        }
+
+        // Actualizar los atributos opcionales de la marca
+        if (marcaDTO.getSitioWeb() != null) {
+            marca.setSitioWeb(marcaDTO.getSitioWeb());
+        }
+        if (marcaDTO.getTelefono() != null) {
+            marca.setTelefono(marcaDTO.getTelefono());
+        }
+        if (marcaDTO.getAnyoFundacion() != null) {
+            marca.setAnyoFundacion(marcaDTO.getAnyoFundacion());
+        }
+
+        // Guardar la marca actualizada
+        marcaRepository.save(marca);
+
+        // Verificar si se deben actualizar modelos para esta marca
+        if (marcaDTO.getModelos() != null) {
+            for (ModeloDTO modeloDTO : marcaDTO.getModelos()) {
+                // Crear un nuevo modelo si no tiene ID o buscar el existente
+                Modelo modelo;
+                if (modeloDTO.getId() != null) {
+                    Optional<Modelo> optionalModelo = modeloRepository.findById(modeloDTO.getId());
+                    if (optionalModelo.isPresent()) {
+                        modelo = optionalModelo.get();
+                    } else {
+                        modelo = new Modelo();
+                        modelo.setMarca(marca);
+                    }
+                } else {
+                    modelo = new Modelo();
+                    modelo.setMarca(marca);
+                }
+
+                // Actualizar los atributos obligatorios del modelo
+                if (modeloDTO.getNombre() != null && !modeloDTO.getNombre().isEmpty()) {
+                    modelo.setNombre(modeloDTO.getNombre());
+                }
+                if (modeloDTO.getTipoCoche() != null && !modeloDTO.getTipoCoche().isEmpty()) {
+                    modelo.setTipoCoche(modeloDTO.getTipoCoche());
+                }
+
+                // Actualizar los atributos opcionales del modelo
+                if (modeloDTO.getAnyoLanzamiento() != null) {
+                    modelo.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+                }
+
+                // Guardar el modelo actualizado
+                modeloRepository.save(modelo);
+
+                // Verificar si se deben actualizar coches para este modelo
+                if (modeloDTO.getCoches() != null) {
+                    for (CocheDTO cocheDTO : modeloDTO.getCoches()) {
+                        // Crear un nuevo coche si no tiene ID o buscar el existente
+                        Coche coche;
+                        if (cocheDTO.getId() != null) {
+                            Optional<Coche> optionalCoche = cocheRepository.findById(cocheDTO.getId());
+                            if (optionalCoche.isPresent()) {
+                                coche = optionalCoche.get();
+                            } else {
+                                coche = new Coche();
+                                coche.setModelo(modelo);
+                            }
+                        } else {
+                            coche = new Coche();
+                            coche.setModelo(modelo);
+                        }
+
+                        // Actualizar los atributos obligatorios del coche
+                        if (cocheDTO.getColor() != null && !cocheDTO.getColor().isEmpty()) {
+                            coche.setColor(cocheDTO.getColor());
+                        }
+                        if (cocheDTO.getMatricula() != null && !cocheDTO.getMatricula().isEmpty()) {
+                            coche.setMatricula(cocheDTO.getMatricula());
+                        }
+
+                        // Actualizar los atributos opcionales del coche
+                        if (cocheDTO.getPrecio() != 0) {
+                            coche.setPrecio(cocheDTO.getPrecio());
+                        }
+                        if (cocheDTO.getFechaFabricacion() != null) {
+                            coche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+                        }
+
+                        // Guardar el coche actualizado
+                        cocheRepository.save(coche);
+                    }
+                }
+            }
+        }
+
+        return ResponseEntity.ok("Marca actualizada correctamente.");
+    }
 
     // Actualizar información de marcas existentes
     @PutMapping("/{id}")

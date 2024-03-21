@@ -6,7 +6,7 @@ import java.time.LocalDate;
 
 @Data
 public class CocheDTO {
-    private int id;
+    private Long id;
     private String color;
     private String matricula;
     private float precio;
