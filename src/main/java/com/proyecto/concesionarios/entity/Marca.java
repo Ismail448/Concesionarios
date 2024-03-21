@@ -24,8 +24,8 @@ public class Marca {
     private String telefono;
     private String anyoFundacion;
 
-    //@JsonIgnoreProperties({"marcas", "modelos"})
-    @JsonIgnore
+    @JsonIgnoreProperties({"marcas", "modelos"})
+    //@JsonIgnore
     //@JsonBackReference
     @ManyToMany(mappedBy = "marcas")
     private List<Concesionario> concesionarios;

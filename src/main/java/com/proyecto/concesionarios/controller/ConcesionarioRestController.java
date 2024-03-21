@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
+
 
 @RestController
 @RequestMapping("/concesionario")
@@ -113,10 +115,11 @@ public class ConcesionarioRestController {
         }
         concesionario.setMarcas(marcas);
 
-        // Guardar el concesionario
+        // Guardar el concesionario y obtener su ID
         Concesionario savedConcesionario = concesionarioRepository.save(concesionario);
+        Long concesionarioId = savedConcesionario.getId();
 
-        return ResponseEntity.ok("Concesionario registrado correctamente.");
+        return ResponseEntity.ok("Concesionario registrado correctamente con ID: " + concesionarioId);
     }
 
     //Registrar nuevos concesionarios y posibilidad de registrar tambien marcas, modelos y coches

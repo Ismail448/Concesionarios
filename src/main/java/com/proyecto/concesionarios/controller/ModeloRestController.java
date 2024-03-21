@@ -89,9 +89,9 @@ public class ModeloRestController {
     @PutMapping("{id}")
     public ResponseEntity<String> actualizarModelo(
             @PathVariable Long id,
-            @RequestParam String nombre,
-            @RequestParam String tipoCoche,
-            @RequestParam int anyoLanzamiento,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String tipoCoche,
+            @RequestParam(required = false) Integer anyoLanzamiento,
             @RequestParam(required = false) Long marcaId) {
 
         Optional<Modelo> optionalModelo = modeloRepository.findById(id);
@@ -100,10 +100,17 @@ public class ModeloRestController {
         }
 
         Modelo modelo = optionalModelo.get();
-        modelo.setNombre(nombre);
-        modelo.setTipoCoche(tipoCoche);
-        modelo.setAnyoLanzamiento(anyoLanzamiento);
 
+        // Actualizar solo los campos que se proporcionen en la solicitud
+        if (nombre != null) {
+            modelo.setNombre(nombre);
+        }
+        if (tipoCoche != null) {
+            modelo.setTipoCoche(tipoCoche);
+        }
+        if (anyoLanzamiento != null) {
+            modelo.setAnyoLanzamiento(anyoLanzamiento);
+        }
         if (marcaId != null) {
             Optional<Marca> marcaOptional = marcaRepository.findById(marcaId);
             if (marcaOptional.isPresent()) {
@@ -111,14 +118,13 @@ public class ModeloRestController {
             } else {
                 return ResponseEntity.badRequest().body("No se encontró una marca con el ID proporcionado: " + marcaId);
             }
-        } else {
-            modelo.setMarca(null); // Si no se proporciona un nuevo ID de marca, eliminamos la asociación existente
         }
 
         modeloRepository.save(modelo);
 
         return ResponseEntity.ok("Modelo actualizado correctamente");
     }
+
 
 
     //Eliminar concesionarios

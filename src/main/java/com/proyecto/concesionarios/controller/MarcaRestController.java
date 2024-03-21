@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +40,9 @@ public class MarcaRestController {
 
     @Autowired
     private CocheRepository cocheRepository;
+
+    @Autowired
+    private ConcesionarioRepository concesionarioRepository;
 
     // Registrar nuevas marcas y posibilidad de registrar modelos y coches tambien
     @PostMapping("MarcaJson")
@@ -105,10 +109,10 @@ public class MarcaRestController {
             @RequestParam String anyoFundacion,
             @RequestParam(required = false) String nombreModelo,
             @RequestParam(required = false) String tipoCoche,
-            @RequestParam(required = false) int anyoLanzamiento,
+            @RequestParam(required = false) Integer anyoLanzamiento,
             @RequestParam(required = false) String color,
             @RequestParam(required = false) String matricula,
-            @RequestParam(required = false) float precio,
+            @RequestParam(required = false) Float precio,
             @RequestParam(required = false) String fechaFabricacion) {
 
         Marca nuevaMarca = new Marca();
@@ -257,14 +261,45 @@ public class MarcaRestController {
 
     // Actualizar información de marcas existentes
     @PutMapping("/{id}")
-    public ResponseEntity<Marca> actualizarMarca(@PathVariable Long id, @Valid @RequestBody Marca marca) {
-        if (!marcaRepository.existsById(id)) {
+    public ResponseEntity<String> actualizarMarca(
+            @PathVariable Long id,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String paisOrigen,
+            @RequestParam(required = false) String sitioWeb,
+            @RequestParam(required = false) String telefono,
+            @RequestParam(required = false) String anyoFundacion)
+             {
+
+        Optional<Marca> optionalMarca = marcaRepository.findById(id);
+        if (!optionalMarca.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        marca.setId(id); // Asignar ID para evitar que se cree un nuevo registro
-        Marca updatedMarca = marcaRepository.save(marca);
-        return ResponseEntity.ok(updatedMarca);
+
+        Marca marca = optionalMarca.get();
+
+        // Actualizar atributos de la marca si se proporcionan en la solicitud
+        if (nombre != null) {
+            marca.setNombre(nombre);
+        }
+        if (paisOrigen != null) {
+            marca.setPaisOrigen(paisOrigen);
+        }
+        if (sitioWeb != null) {
+            marca.setSitioWeb(sitioWeb);
+        }
+        if (telefono != null) {
+            marca.setTelefono(telefono);
+        }
+        if (anyoFundacion != null) {
+            marca.setAnyoFundacion(anyoFundacion);
+        }
+
+        // Guardar la marca actualizada en la base de datos
+        marcaRepository.save(marca);
+
+        return ResponseEntity.ok("Marca actualizada correctamente");
     }
+
 
     // Eliminar marcas
     @DeleteMapping("/{id}")

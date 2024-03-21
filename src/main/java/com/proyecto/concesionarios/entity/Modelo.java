@@ -19,7 +19,7 @@ public class Modelo {
     private Long id;
     private String nombre;
     private String tipoCoche;
-    private int anyoLanzamiento;
+    private Integer anyoLanzamiento;
 
     //@JsonIgnoreProperties("modelos")
     //@JsonIgnore
