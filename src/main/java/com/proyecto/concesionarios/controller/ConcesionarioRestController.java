@@ -1,9 +1,17 @@
 package com.proyecto.concesionarios.controller;
 
+import com.proyecto.concesionarios.dto.CocheDTO;
+import com.proyecto.concesionarios.dto.ConcesionarioDTO;
+import com.proyecto.concesionarios.dto.MarcaDTO;
+import com.proyecto.concesionarios.dto.ModeloDTO;
+import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
+import com.proyecto.concesionarios.entity.Modelo;
+import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
+import com.proyecto.concesionarios.repository.ModeloRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -12,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,20 +36,90 @@ public class ConcesionarioRestController {
     @Autowired
     private MarcaRepository marcaRepository;
 
-    //Registrar nuevos concesionarios
-    /**@PostMapping
-    public ResponseEntity<?> registrarConcesionario(@Valid @RequestBody Concesionario concesionario) {
-        // Validar que al menos dos atributos obligatorios estén presentes
-        if (concesionario.getNombre() == null || concesionario.getDireccion() == null) {
-            // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().body("Los campos 'nombre' y 'direccion' son obligatorios.");
+    @Autowired
+    private ModeloRepository modeloRepository;
 
+    @Autowired
+    private CocheRepository cocheRepository;
+
+    //Registrar nuevos concesionarios y posibilidad de registrar tambien marcas, modelos y coches
+    @PostMapping("ConcesionarioJson")
+    public ResponseEntity<String> registrarCocnesionarioJson(@RequestBody ConcesionarioDTO concesionarioDTO) {
+        //Validar que al menos dos atributos sean obligatorios
+        if (concesionarioDTO.getNombre() == null || concesionarioDTO.getNombre().isEmpty() ||
+                concesionarioDTO.getDireccion() == null || concesionarioDTO.getDireccion().isEmpty()) {
+            return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para el concesionario.");
         }
-        Concesionario savedConcesionario = concesionarioRepository.save(concesionario);
-        //return ResponseEntity.status(HttpStatus.CREATED).body(savedConcesionario);
-        return ResponseEntity.ok(savedConcesionario);
-    }*/
 
+        Concesionario concesionario = new Concesionario();
+        concesionario.setNombre(concesionarioDTO.getNombre());
+        concesionario.setDireccion(concesionarioDTO.getDireccion());
+        concesionario.setTelefono(concesionarioDTO.getTelefono());
+        concesionario.setEmail(concesionarioDTO.getEmail());
+        concesionario.setSitioWeb(concesionarioDTO.getSitioWeb());
+
+        // Crear y asociar marcas al concesionario
+        List<Marca> marcas = new ArrayList<>();
+        if (concesionarioDTO.getMarcas() != null) {
+            for (MarcaDTO marcaDTO : concesionarioDTO.getMarcas()) {
+                // Validar que al menos dos atributos sean obligatorios para la marca
+                if (marcaDTO.getNombre() == null || marcaDTO.getNombre().isEmpty() ||
+                        marcaDTO.getPaisOrigen() == null || marcaDTO.getPaisOrigen().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada marca.");
+                }
+                Marca marca = new Marca();
+                marca.setNombre(marcaDTO.getNombre());
+                marca.setPaisOrigen(marcaDTO.getPaisOrigen());
+                marca.setSitioWeb(marcaDTO.getSitioWeb());
+                marca.setTelefono(marcaDTO.getTelefono());
+                marca.setAnyoFundacion(marcaDTO.getAnyoFundacion());
+                marcaRepository.save(marca);
+                marcas.add(marca);
+
+                // Verificar si se debe registrar un modelo para esta marca
+                if (marcaDTO.getModelo() != null) {
+                    // Validar que al menos dos atributos sean obligatorios para el modelo
+                    ModeloDTO modeloDTO = marcaDTO.getModelo();
+                    if (modeloDTO.getNombre() == null || modeloDTO.getNombre().isEmpty() ||
+                            modeloDTO.getTipoCoche() == null || modeloDTO.getTipoCoche().isEmpty()) {
+                        return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para el modelo.");
+                    }
+                    Modelo modelo = new Modelo();
+                    modelo.setNombre(modeloDTO.getNombre());
+                    modelo.setTipoCoche(modeloDTO.getTipoCoche());
+                    modelo.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+                    modelo.setMarca(marca);
+                    modeloRepository.save(modelo);
+
+                    // Verificar si se debe registrar un coche para este modelo
+                    if (modeloDTO.getCoches() != null) {
+                        for (CocheDTO cocheDTO : modeloDTO.getCoches()) {
+                            // Validar que al menos dos atributos sean obligatorios para el coche
+                            if (cocheDTO.getColor() == null || cocheDTO.getColor().isEmpty() ||
+                                    cocheDTO.getMatricula() == null || cocheDTO.getMatricula().isEmpty()) {
+                                return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada coche.");
+                            }
+                            Coche coche = new Coche();
+                            coche.setColor(cocheDTO.getColor());
+                            coche.setMatricula(cocheDTO.getMatricula());
+                            coche.setPrecio(cocheDTO.getPrecio());
+                            coche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+                            coche.setModelo(modelo);
+                            cocheRepository.save(coche);
+                        }
+                    }
+                }
+            }
+        }
+        concesionario.setMarcas(marcas);
+
+        // Guardar el concesionario
+        Concesionario savedConcesionario = concesionarioRepository.save(concesionario);
+
+        return ResponseEntity.ok("Concesionario registrado correctamente.");
+    }
+
+    //Registrar nuevos concesionarios y posibilidad de registrar tambien marcas, modelos y coches
     @PostMapping
     public ResponseEntity<String> registrarConcesionario(
             @RequestParam String nombre,
@@ -67,24 +147,86 @@ public class ConcesionarioRestController {
     }
 
     //Actualizar información de concesionarios existentes
-    /**@PutMapping("/{id}")
-    public ResponseEntity<Concesionario> actualizarConcesionario(@PathVariable Long id, @RequestBody Concesionario concesionario) {
+    @PutMapping("ConcesionarioJson/{id}")
+    public ResponseEntity<String> actualizarConcesionarioJson(@PathVariable Long id, @RequestBody ConcesionarioDTO concesionarioDTO) {
         Optional<Concesionario> optionalConcesionario = concesionarioRepository.findById(id);
         if (!optionalConcesionario.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        Concesionario existingConcesionario = optionalConcesionario.get();
-        // Actualizar la información del concesionario
-        existingConcesionario.setNombre(concesionario.getNombre());
-        existingConcesionario.setDireccion(concesionario.getDireccion());
-        existingConcesionario.setTelefono(concesionario.getTelefono());
-        existingConcesionario.setEmail(concesionario.getEmail());
-        existingConcesionario.setSitioWeb(concesionario.getSitioWeb());
-        // Actualizar otros campos según sea necesario
 
-        Concesionario updatedConcesionario = concesionarioRepository.save(existingConcesionario);
-        return ResponseEntity.ok(updatedConcesionario);
-    }*/
+        // Validar que al menos dos atributos sean obligatorios
+        if (concesionarioDTO.getNombre() == null || concesionarioDTO.getNombre().isEmpty() ||
+                concesionarioDTO.getDireccion() == null || concesionarioDTO.getDireccion().isEmpty()) {
+            return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para el concesionario.");
+        }
+
+        Concesionario concesionario = optionalConcesionario.get();
+        concesionario.setNombre(concesionarioDTO.getNombre());
+        concesionario.setDireccion(concesionarioDTO.getDireccion());
+        concesionario.setTelefono(concesionarioDTO.getTelefono());
+        concesionario.setEmail(concesionarioDTO.getEmail());
+        concesionario.setSitioWeb(concesionarioDTO.getSitioWeb());
+
+        // Actualizar y asociar marcas al concesionario
+        List<Marca> marcas = new ArrayList<>();
+        if (concesionarioDTO.getMarcas() != null) {
+            for (MarcaDTO marcaDTO : concesionarioDTO.getMarcas()) {
+                // Validar que al menos dos atributos sean obligatorios para la marca
+                if (marcaDTO.getNombre() == null || marcaDTO.getNombre().isEmpty() ||
+                        marcaDTO.getPaisOrigen() == null || marcaDTO.getPaisOrigen().isEmpty()) {
+                    return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada marca.");
+                }
+                Marca marca = new Marca();
+                marca.setNombre(marcaDTO.getNombre());
+                marca.setPaisOrigen(marcaDTO.getPaisOrigen());
+                marca.setSitioWeb(marcaDTO.getSitioWeb());
+                marca.setTelefono(marcaDTO.getTelefono());
+                marca.setAnyoFundacion(marcaDTO.getAnyoFundacion());
+                marcaRepository.save(marca);
+                marcas.add(marca);
+
+                // Verificar si se debe actualizar un modelo para esta marca
+                if (marcaDTO.getModelo() != null) {
+                    // Validar que al menos dos atributos sean obligatorios para el modelo
+                    ModeloDTO modeloDTO = marcaDTO.getModelo();
+                    if (modeloDTO.getNombre() == null || modeloDTO.getNombre().isEmpty() ||
+                            modeloDTO.getTipoCoche() == null || modeloDTO.getTipoCoche().isEmpty()) {
+                        return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para el modelo.");
+                    }
+                    Modelo modelo = new Modelo();
+                    modelo.setNombre(modeloDTO.getNombre());
+                    modelo.setTipoCoche(modeloDTO.getTipoCoche());
+                    modelo.setAnyoLanzamiento(modeloDTO.getAnyoLanzamiento());
+                    modelo.setMarca(marca);
+                    modeloRepository.save(modelo);
+
+                    // Verificar si se debe actualizar un coche para este modelo
+                    if (modeloDTO.getCoches() != null) {
+                        for (CocheDTO cocheDTO : modeloDTO.getCoches()) {
+                            // Validar que al menos dos atributos sean obligatorios para el coche
+                            if (cocheDTO.getColor() == null || cocheDTO.getColor().isEmpty() ||
+                                    cocheDTO.getMatricula() == null || cocheDTO.getMatricula().isEmpty()) {
+                                return ResponseEntity.badRequest().body("Se requieren al menos dos atributos obligatorios para cada coche.");
+                            }
+                            Coche coche = new Coche();
+                            coche.setColor(cocheDTO.getColor());
+                            coche.setMatricula(cocheDTO.getMatricula());
+                            coche.setPrecio(cocheDTO.getPrecio());
+                            coche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+                            coche.setModelo(modelo);
+                            cocheRepository.save(coche);
+                        }
+                    }
+                }
+            }
+        }
+        concesionario.setMarcas(marcas);
+
+        // Guardar el concesionario actualizado
+        concesionarioRepository.save(concesionario);
+
+        return ResponseEntity.ok("Concesionario actualizado correctamente.");
+    }
 
     @PutMapping("{id}")
     public ResponseEntity<String> actualizarConcesionario(
