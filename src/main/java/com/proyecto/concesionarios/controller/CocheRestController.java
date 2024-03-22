@@ -1,21 +1,27 @@
 package com.proyecto.concesionarios.controller;
 
 import com.proyecto.concesionarios.dto.CocheDTO;
+import com.proyecto.concesionarios.dto.SearchRequestDTO;
 import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
+import jakarta.persistence.criteria.Predicate;
 import javassist.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -235,5 +241,46 @@ public class CocheRestController {
         return cocheRepository.findAll();
     }
 
+    @PostMapping("/coches/search")
+    public ResponseEntity<Page<Coche>> searchCoches(@RequestBody SearchRequestDTO request) {
+        // Construir criterios de orden
+        Sort sort = buildSortCriteria(request.getListOrderCriteria());
 
+        // Construir criterios de búsqueda
+        Specification<Coche> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+        // Paginación
+        Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+        // Realizar la búsqueda paginada
+        Page<Coche> cochesPage = cocheRepository.findAll(spec, pageable);
+
+        return new ResponseEntity<>(cochesPage, HttpStatus.OK);
+    }
+
+    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+        List<Sort.Order> orders = new ArrayList<>();
+        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        }
+        return Sort.by(orders);
+    }
+
+    private Specification<Coche> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                if (searchCriteria.getKey().equals("color")) {
+                    predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                } else if (searchCriteria.getKey().equals("precio")) {
+                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), Float.parseFloat(searchCriteria.getValue())));
+                } else if (searchCriteria.getKey().equals("fechaFabricacion")) {
+                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), LocalDate.parse(searchCriteria.getValue())));
+                }
+                // Agrega más casos según sea necesario para otros campos de búsqueda
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 }
