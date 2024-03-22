@@ -229,4 +229,11 @@ public class CocheRestController {
         Page<Coche> pageOfCoches = cocheRepository.findAll(pageable);
         return ResponseEntity.ok(pageOfCoches);
     }
+
+    @GetMapping("all")
+    public List<Coche> getAllCoches(){
+        return cocheRepository.findAll();
+    }
+
+
 }

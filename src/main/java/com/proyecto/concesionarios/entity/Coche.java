@@ -26,6 +26,7 @@ public class Coche {
     @DateTimeFormat(pattern = "dd/MM/YYYY")
     private LocalDate fechaFabricacion;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     //@JsonIgnoreProperties("coches")
     //@JsonIgnore
     @ManyToOne

@@ -21,14 +21,15 @@ public class Modelo {
     private String tipoCoche;
     private Integer anyoLanzamiento;
 
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     //@JsonIgnoreProperties("modelos")
     //@JsonIgnore
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "marca_id")
     private Marca marca;
 
     @JsonIgnoreProperties("modelo")
     //@JsonIgnore
-    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "modelo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Coche> coches;
 }

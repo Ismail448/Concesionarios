@@ -13,6 +13,7 @@ import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
 import jakarta.validation.Valid;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -322,5 +323,20 @@ public class ConcesionarioRestController {
         Pageable pageable = PageRequest.of(page, size);
         Page<Concesionario> pageOfConcesionarios = concesionarioRepository.findAll(pageable);
         return ResponseEntity.ok(pageOfConcesionarios);
+    }
+
+    @GetMapping("/all")
+    public List<Concesionario> getAllConcesionariosWithMarcasModelosAndCoches() {
+        List<Concesionario> concesionarios = concesionarioRepository.findAllWithMarcas();
+        for (Concesionario concesionario : concesionarios) {
+            Hibernate.initialize(concesionario.getMarcas());
+            for (Marca marca : concesionario.getMarcas()) {
+                Hibernate.initialize(marca.getModelos());
+                for (Modelo modelo : marca.getModelos()) {
+                    Hibernate.initialize(modelo.getCoches());
+                }
+            }
+        }
+        return concesionarios;
     }
 }

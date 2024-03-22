@@ -25,14 +25,11 @@ public class Marca {
     private String anyoFundacion;
 
     @JsonIgnoreProperties({"marcas", "modelos"})
-    //@JsonIgnore
-    //@JsonBackReference
-    @ManyToMany(mappedBy = "marcas")
+    @ManyToMany(mappedBy = "marcas", fetch = FetchType.LAZY)
     private List<Concesionario> concesionarios;
 
     @JsonIgnoreProperties("marca")
-    //@JsonIgnore
-    @OneToMany(mappedBy = "marca", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "marca", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Modelo> modelos;
 
 }

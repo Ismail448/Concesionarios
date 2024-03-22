@@ -12,6 +12,7 @@ import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
 import jakarta.validation.Valid;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -100,6 +101,7 @@ public class MarcaRestController {
 
         return ResponseEntity.ok("Marca registrada correctamente.");
     }
+
     @PostMapping
     public ResponseEntity<String> registrarMarca(
             @RequestParam String nombre,
@@ -267,8 +269,7 @@ public class MarcaRestController {
             @RequestParam(required = false) String paisOrigen,
             @RequestParam(required = false) String sitioWeb,
             @RequestParam(required = false) String telefono,
-            @RequestParam(required = false) String anyoFundacion)
-             {
+            @RequestParam(required = false) String anyoFundacion) {
 
         Optional<Marca> optionalMarca = marcaRepository.findById(id);
         if (!optionalMarca.isPresent()) {
@@ -318,10 +319,7 @@ public class MarcaRestController {
             @RequestParam(required = false) String paisOrigen,
             @RequestParam(required = false) String sitioWeb,
             @RequestParam(required = false) String telefono,
-            @RequestParam(required = false) String anyoFundacion)
-
-
-    {
+            @RequestParam(required = false) String anyoFundacion) {
 
         List<Marca> marcas;
         if (nombre != null || paisOrigen != null || sitioWeb != null || telefono != null || anyoFundacion != null) {
@@ -347,5 +345,17 @@ public class MarcaRestController {
         Pageable pageable = PageRequest.of(page, size);
         Page<Marca> pageOfMarcas = marcaRepository.findAll(pageable);
         return ResponseEntity.ok(pageOfMarcas);
+    }
+
+    @GetMapping("/all")
+    public List<Marca> getAllMarcasWithModelosAndCoches() {
+        List<Marca> marcas = marcaRepository.findAllMarcas();
+        for (Marca marca : marcas) {
+            Hibernate.initialize(marca.getModelos());
+            for (Modelo modelo : marca.getModelos()) {
+                Hibernate.initialize(modelo.getCoches());
+            }
+        }
+        return marcas;
     }
 }

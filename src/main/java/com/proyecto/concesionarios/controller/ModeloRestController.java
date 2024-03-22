@@ -8,6 +8,7 @@ import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -65,7 +67,7 @@ public class ModeloRestController {
             }
         }
 
-        return ResponseEntity.ok("Modelo registrado correctamente con ID: " + nuevoModelo.getId() );
+        return ResponseEntity.ok("Modelo registrado correctamente con ID: " + nuevoModelo.getId());
     }
 
     @PostMapping
@@ -165,7 +167,6 @@ public class ModeloRestController {
     }
 
 
-
     //Eliminar concesionarios
     @DeleteMapping("/{id}")
     public ResponseEntity<String> eliminarModelo(@PathVariable Long id) {
@@ -198,7 +199,6 @@ public class ModeloRestController {
     }
 
 
-
     //Devolver resultados de forma paginada
     @GetMapping("/paginado")
     public ResponseEntity<Page<Modelo>> buscarModelosPaginados(
@@ -209,4 +209,10 @@ public class ModeloRestController {
         Page<Modelo> pageOfModelos = modeloRepository.findAll(pageable);
         return ResponseEntity.ok(pageOfModelos);
     }
+
+    @GetMapping("all")
+    public List<Modelo> getAllModelosWithCoches() {
+        return modeloRepository.findAllModelos();
+    }
 }
+
