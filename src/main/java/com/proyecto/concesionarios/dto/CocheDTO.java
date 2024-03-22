@@ -1,5 +1,6 @@
 package com.proyecto.concesionarios.dto;
 
+import com.proyecto.concesionarios.entity.Modelo;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -11,4 +12,5 @@ public class CocheDTO {
     private String matricula;
     private float precio;
     private LocalDate fechaFabricacion;
+    private Long modeloId;
 }

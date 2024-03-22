@@ -1,5 +1,6 @@
 package com.proyecto.concesionarios.controller;
 
+import com.proyecto.concesionarios.dto.CocheDTO;
 import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
@@ -29,16 +30,35 @@ public class CocheRestController {
     @Autowired
     ModeloRepository modeloRepository;
 
-    /**@PostMapping
-    public ResponseEntity<?> registrarCoche(@RequestBody Coche coche) {
-        // Validar que al menos dos atributos obligatorios estén presentes
-        if (coche.getColor() == null || coche.getMatricula() == null) {
-            // Manejo de error si no se cumplen los requisitos
-            return ResponseEntity.badRequest().body("Los campos 'color' y 'matricula' son obligatorios.");
+    @PostMapping("registrarCocheJson")
+    public ResponseEntity<String> registrarCocheJson(@RequestBody CocheDTO cocheDTO) {
+        try {
+            Modelo modelo = modeloRepository.findById(cocheDTO.getModeloId())
+                    .orElseThrow(() -> new NotFoundException("Modelo no encontrado"));
+
+            if (cocheDTO.getColor() != null && cocheDTO.getMatricula() != null &&
+                    cocheDTO.getPrecio() != 0 && cocheDTO.getFechaFabricacion() != null) {
+                Coche nuevoCoche = new Coche();
+                nuevoCoche.setColor(cocheDTO.getColor());
+                nuevoCoche.setMatricula(cocheDTO.getMatricula());
+                nuevoCoche.setPrecio(cocheDTO.getPrecio());
+                nuevoCoche.setFechaFabricacion(cocheDTO.getFechaFabricacion());
+
+                // Asigna el modelo al coche
+                nuevoCoche.setModelo(modelo);
+
+                // Guarda el coche y actualiza la relación en el modelo
+                cocheRepository.save(nuevoCoche);
+                modeloRepository.save(modelo);
+
+                return ResponseEntity.ok("Coche registrado correctamente");
+            } else {
+                return ResponseEntity.badRequest().body("Por favor, proporcione todos los campos requeridos");
+            }
+        } catch (NotFoundException e) {
+            return ResponseEntity.badRequest().body("Modelo no encontrado");
         }
-        Coche savedCoche = cocheRepository.save(coche);
-        return ResponseEntity.ok(savedCoche);
-    }*/
+    }
 
     @PostMapping
     public ResponseEntity<String> registrarCoche(
@@ -69,34 +89,8 @@ public class CocheRestController {
         }
     }
 
-
-    //Actualizar información de concesionarios existentes
-    /**@PutMapping("/{id}")
-    public ResponseEntity<Coche> actualizarCoche(@PathVariable Long id, @RequestBody Coche coche) {
-        Optional<Coche> optionalCoche = cocheRepository.findById(id);
-        if (!optionalCoche.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        Coche existingCoche = optionalCoche.get();
-        // Actualizar la información del concesionario
-        existingCoche.setColor(coche.getColor());
-        existingCoche.setMatricula(coche.getMatricula());
-        existingCoche.setPrecio(coche.getPrecio());
-        existingCoche.setFechaFabricacion(coche.getFechaFabricacion());
-        // Actualizar otros campos según sea necesario
-
-        Coche updatedCoche = cocheRepository.save(existingCoche);
-        return ResponseEntity.ok(updatedCoche);
-    }*/
-
-    @PutMapping("/{id}")
-    public ResponseEntity<String> actualizarCoche(
-            @PathVariable Long id,
-            @RequestParam String color,
-            @RequestParam String matricula,
-            @RequestParam float precio,
-            @RequestParam String fechaFabricacion,
-            @RequestParam(required = false) Long modeloId) {
+    @PutMapping("CocheJson/{id}")
+    public ResponseEntity<String> actualizarCocheJson(@PathVariable Long id, @RequestBody CocheDTO cocheDTO) {
 
         Optional<Coche> optionalCoche = cocheRepository.findById(id);
         if (!optionalCoche.isPresent()) {
@@ -104,25 +98,33 @@ public class CocheRestController {
         }
 
         Coche coche = optionalCoche.get();
-        coche.setColor(color);
-        coche.setMatricula(matricula);
-        coche.setPrecio(precio);
 
-        // Parsear la fecha de fabricación
-        LocalDate fecha = null;
-        try {
-            fecha = LocalDate.parse(fechaFabricacion);
-        } catch (DateTimeParseException e) {
-            return ResponseEntity.badRequest().body("Formato de fecha de fabricación no válido");
+        // Actualizar solo los campos que no sean nulos en el DTO
+        if (cocheDTO.getColor() != null) {
+            coche.setColor(cocheDTO.getColor());
         }
-        coche.setFechaFabricacion(fecha);
-
-        if (modeloId != null) {
-            Optional<Modelo> modeloOptional = modeloRepository.findById(modeloId);
+        if (cocheDTO.getMatricula() != null) {
+            coche.setMatricula(cocheDTO.getMatricula());
+        }
+        if (cocheDTO.getPrecio() != 0) {
+            coche.setPrecio(cocheDTO.getPrecio());
+        }
+        if (cocheDTO.getFechaFabricacion() != null) {
+            // Parsear la fecha de fabricación
+            LocalDate fecha = null;
+            try {
+                fecha = cocheDTO.getFechaFabricacion();
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.badRequest().body("Formato de fecha de fabricación no válido");
+            }
+            coche.setFechaFabricacion(fecha);
+        }
+        if (cocheDTO.getModeloId() != null) {
+            Optional<Modelo> modeloOptional = modeloRepository.findById(cocheDTO.getModeloId());
             if (modeloOptional.isPresent()) {
                 coche.setModelo(modeloOptional.get());
             } else {
-                return ResponseEntity.badRequest().body("No se encontró un modelo con el ID proporcionado: " + modeloId);
+                return ResponseEntity.badRequest().body("No se encontró un modelo con el ID proporcionado: " + cocheDTO.getModeloId());
             }
         } else {
             coche.setModelo(null); // Si no se proporciona un nuevo ID de modelo, eliminamos la asociación existente
@@ -132,6 +134,56 @@ public class CocheRestController {
 
         return ResponseEntity.ok("Coche actualizado correctamente");
     }
+
+    //Actualizar información de concesionarios existentes
+    @PutMapping("/{id}")
+    public ResponseEntity<String> actualizarCoche(
+            @PathVariable Long id,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String matricula,
+            @RequestParam(required = false) Float precio,
+            @RequestParam(required = false) String fechaFabricacion,
+            @RequestParam(required = false) Long modeloId) {
+
+        Optional<Coche> optionalCoche = cocheRepository.findById(id);
+        if (!optionalCoche.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Coche coche = optionalCoche.get();
+
+        // Verificar y actualizar los campos no nulos
+        if (color != null) {
+            coche.setColor(color);
+        }
+        if (matricula != null) {
+            coche.setMatricula(matricula);
+        }
+        if (precio != null) {
+            coche.setPrecio(precio);
+        }
+        if (fechaFabricacion != null) {
+            try {
+                LocalDate fecha = LocalDate.parse(fechaFabricacion);
+                coche.setFechaFabricacion(fecha);
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.badRequest().body("Formato de fecha de fabricación no válido");
+            }
+        }
+        if (modeloId != null) {
+            Optional<Modelo> modeloOptional = modeloRepository.findById(modeloId);
+            if (modeloOptional.isPresent()) {
+                coche.setModelo(modeloOptional.get());
+            } else {
+                return ResponseEntity.badRequest().body("No se encontró un modelo con el ID proporcionado: " + modeloId);
+            }
+        }
+
+        cocheRepository.save(coche);
+
+        return ResponseEntity.ok("Coche actualizado correctamente");
+    }
+
 
     //Eliminar concesionarios
     @DeleteMapping("/{id}")
@@ -149,9 +201,7 @@ public class CocheRestController {
             @RequestParam(required = false) String color,
             @RequestParam(required = false) String matricula,
             @RequestParam(required = false) Float precio,
-            @RequestParam(required = false) LocalDate fechaFabricacion)
-
-            {
+            @RequestParam(required = false) LocalDate fechaFabricacion) {
 
         List<Coche> coches;
         if (color != null || matricula != null || precio != null || fechaFabricacion != null) {
@@ -167,7 +217,6 @@ public class CocheRestController {
 
         return ResponseEntity.ok(coches);
     }
-
 
 
     //Devolver resultados de forma paginada
