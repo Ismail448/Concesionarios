@@ -4,6 +4,7 @@ import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -21,4 +22,6 @@ public interface MarcaRepository extends JpaRepository<Marca, Long> {
 
     @Query("SELECT DISTINCT m FROM Marca m LEFT JOIN FETCH m.modelos")
     List<Marca> findAllMarcas();
+
+    Page<Marca> findAll(Specification<Marca> spec, Pageable pageable);
 }

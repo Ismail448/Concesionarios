@@ -13,4 +13,13 @@ public class ConcesionarioDTO {
     private String email;
     private String sitioWeb;
     private List<MarcaDTO> marcas;
+
+    public ConcesionarioDTO(Long id, String nombre, String direccion, String telefono, String email, String sitioWeb) {
+        this.id = id;
+        this.nombre = nombre;
+        this.direccion = direccion;
+        this.telefono = telefono;
+        this.email = email;
+        this.sitioWeb = sitioWeb;
+    }
 }

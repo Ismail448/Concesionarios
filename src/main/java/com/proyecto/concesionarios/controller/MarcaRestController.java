@@ -4,18 +4,21 @@ package com.proyecto.concesionarios.controller;
 import com.proyecto.concesionarios.dto.CocheDTO;
 import com.proyecto.concesionarios.dto.MarcaDTO;
 import com.proyecto.concesionarios.dto.ModeloDTO;
+import com.proyecto.concesionarios.dto.SearchRequestDTO;
 import com.proyecto.concesionarios.entity.Coche;
-import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
 import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
-import jakarta.validation.Valid;
+import jakarta.persistence.criteria.Predicate;
 import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @RestController
 @RequestMapping("/marcas")
@@ -357,5 +359,85 @@ public class MarcaRestController {
             }
         }
         return marcas;
+    }
+
+    @PostMapping("/marcas/search")
+    public ResponseEntity<?> searchMarcas(@RequestBody SearchRequestDTO request) {
+        try {
+            // Validar el tamaño de la página
+            int pageSize = request.getPage().getPageSize();
+            if (pageSize <= 0) {
+                return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+            }
+
+            // Construir criterios de orden
+            Sort sort = buildSortCriteria(request.getListOrderCriteria());
+
+            // Construir criterios de búsqueda
+            Specification<Marca> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+            // Paginación
+            Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+            // Realizar la búsqueda paginada
+            Page<Marca> marcasPage = marcaRepository.findAll(spec, pageable);
+
+            // Mapear los resultados a MarcaDTO
+            Page<MarcaDTO> marcasDTOPage = marcasPage.map(marca -> new MarcaDTO(
+                    marca.getId(),
+                    marca.getNombre(),
+                    marca.getPaisOrigen(),
+                    marca.getSitioWeb(),
+                    marca.getTelefono(),
+                    marca.getAnyoFundacion()
+            ));
+
+            return new ResponseEntity<>(marcasDTOPage, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+        List<Sort.Order> orders = new ArrayList<>();
+        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        }
+        return Sort.by(orders);
+    }
+
+    private Specification<Marca> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                switch (searchCriteria.getKey()) {
+                    case "nombre", "sitioWeb", "telefono" -> {
+                        if (searchCriteria.getOperation().equals("like")) {
+                            predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                        } else if (searchCriteria.getOperation().equals("equal")) {
+                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        }
+                    }
+                    case "paisOrigen" -> {
+                        if (searchCriteria.getOperation().equals("equal")) {
+                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        }
+                    }
+                    case "anyoFundacion" -> {
+                        int year = Integer.parseInt(searchCriteria.getValue());
+                        switch (searchCriteria.getOperation()) {
+                            case "greater_than" ->
+                                    predicates.add(cb.greaterThan(root.get(searchCriteria.getKey()), year));
+                            case "equal" -> predicates.add(cb.equal(root.get(searchCriteria.getKey()), year));
+                            case "lower_than" -> predicates.add(cb.lessThan(root.get(searchCriteria.getKey()), year));
+                        }
+                    }
+                    // Agrega más casos según sea necesario para otras claves de búsqueda
+                }
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
     }
 }

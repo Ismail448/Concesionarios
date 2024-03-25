@@ -21,7 +21,7 @@ public class Coche {
 
     private String color;
     private String matricula;
-    private float precio;
+    private Float precio;
     @Temporal(TemporalType.DATE)
     @DateTimeFormat(pattern = "dd/MM/YYYY")
     private LocalDate fechaFabricacion;

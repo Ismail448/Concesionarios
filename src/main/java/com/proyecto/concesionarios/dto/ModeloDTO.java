@@ -12,4 +12,12 @@ public class ModeloDTO {
     private Integer anyoLanzamiento;
     private Long marcaId;
     private List<CocheDTO> coches;
+
+    public ModeloDTO(Long id, String nombre, String tipoCoche, Integer anyoLanzamiento, Long marcaId) {
+        this.id = id;
+        this.nombre = nombre;
+        this.tipoCoche = tipoCoche;
+        this.anyoLanzamiento = anyoLanzamiento;
+        this.marcaId = marcaId;
+    }
 }

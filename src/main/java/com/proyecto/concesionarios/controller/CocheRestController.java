@@ -237,11 +237,11 @@ public class CocheRestController {
     }
 
     @GetMapping("all")
-    public List<Coche> getAllCoches(){
+    public List<Coche> getAllCoches() {
         return cocheRepository.findAll();
     }
 
-    @PostMapping("/coches/search")
+    /*@PostMapping("/coches/search")
     public ResponseEntity<Page<Coche>> searchCoches(@RequestBody SearchRequestDTO request) {
         // Construir criterios de orden
         Sort sort = buildSortCriteria(request.getListOrderCriteria());
@@ -279,6 +279,69 @@ public class CocheRestController {
                     predicates.add(cb.equal(root.get(searchCriteria.getKey()), LocalDate.parse(searchCriteria.getValue())));
                 }
                 // Agrega más casos según sea necesario para otros campos de búsqueda
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }*/
+
+    @PostMapping("/coches/search")
+    public ResponseEntity<?> searchCoches(@RequestBody SearchRequestDTO request) {
+        try {
+            // Validar el tamaño de la página
+            int pageSize = request.getPage().getPageSize();
+            if (pageSize <= 0) {
+                return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+            }
+            // Construir criterios de orden
+            Sort sort = buildSortCriteria(request.getListOrderCriteria());
+
+            // Construir criterios de búsqueda
+            Specification<Coche> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+            // Paginación
+            Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+            // Realizar la búsqueda paginada
+            Page<Coche> cochesPage = cocheRepository.findAll(spec, pageable);
+
+            // Mapear los resultados a CocheDTO
+            Page<CocheDTO> cochesDTOPage = cochesPage.map(coche -> new CocheDTO(coche.getId(), coche.getColor(), coche.getMatricula(), coche.getPrecio(), coche.getFechaFabricacion(), coche.getModelo().getId()));
+
+            return new ResponseEntity<>(cochesDTOPage, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+        List<Sort.Order> orders = new ArrayList<>();
+        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        }
+        return Sort.by(orders);
+    }
+
+    private Specification<Coche> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                switch (searchCriteria.getKey()) {
+                    case "color", "matricula":
+                        predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        break;
+                    case "precio", "fechaFabricacion":
+                        switch (searchCriteria.getOperation()) {
+                            case "greater_than" ->
+                                    predicates.add(cb.greaterThan(root.get(searchCriteria.getKey()), Float.parseFloat(searchCriteria.getValue())));
+                            case "equal" ->
+                                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), Float.parseFloat(searchCriteria.getValue())));
+                            case "lower_than" ->
+                                    predicates.add(cb.lessThan(root.get(searchCriteria.getKey()), Float.parseFloat(searchCriteria.getValue())));
+                        }
+                        break;
+                    // Agrega más casos según sea necesario para otros campos de búsqueda
+                }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

@@ -1,9 +1,6 @@
 package com.proyecto.concesionarios.controller;
 
-import com.proyecto.concesionarios.dto.CocheDTO;
-import com.proyecto.concesionarios.dto.ConcesionarioDTO;
-import com.proyecto.concesionarios.dto.MarcaDTO;
-import com.proyecto.concesionarios.dto.ModeloDTO;
+import com.proyecto.concesionarios.dto.*;
 import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.entity.Marca;
@@ -12,12 +9,14 @@ import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
-import jakarta.validation.Valid;
+import jakarta.persistence.criteria.Predicate;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -338,5 +337,65 @@ public class ConcesionarioRestController {
             }
         }
         return concesionarios;
+    }
+
+    @PostMapping("/concesionarios/search")
+    public ResponseEntity<?> searchConcesionarios(@RequestBody SearchRequestDTO request) {
+        try {
+            // Validar el tamaño de la página
+            int pageSize = request.getPage().getPageSize();
+            if (pageSize <= 0) {
+                return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+            }
+
+            // Construir criterios de orden
+            Sort sort = buildSortCriteria(request.getListOrderCriteria());
+
+            // Construir criterios de búsqueda
+            Specification<Concesionario> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+            // Paginación
+            Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+            // Realizar la búsqueda paginada
+            Page<Concesionario> concesionariosPage = concesionarioRepository.findAll(spec, pageable);
+
+            // Mapear los resultados a ConcesionarioDTO
+            Page<ConcesionarioDTO> concesionariosDTOPage = concesionariosPage.map(concesionario -> new ConcesionarioDTO(
+                    concesionario.getId(),
+                    concesionario.getNombre(),
+                    concesionario.getDireccion(),
+                    concesionario.getTelefono(),
+                    concesionario.getEmail(),
+                    concesionario.getSitioWeb()
+            ));
+
+            return new ResponseEntity<>(concesionariosDTOPage, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+        List<Sort.Order> orders = new ArrayList<>();
+        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        }
+        return Sort.by(orders);
+    }
+
+    private Specification<Concesionario> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                switch (searchCriteria.getKey()) {
+                    case "nombre", "direccion", "telefono", "email", "sitioWeb":
+                        predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        break;
+                }
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }

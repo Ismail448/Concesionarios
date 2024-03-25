@@ -2,20 +2,26 @@ package com.proyecto.concesionarios.controller;
 
 import com.proyecto.concesionarios.dto.CocheDTO;
 import com.proyecto.concesionarios.dto.ModeloDTO;
+import com.proyecto.concesionarios.dto.SearchRequestDTO;
 import com.proyecto.concesionarios.entity.Coche;
 import com.proyecto.concesionarios.entity.Marca;
 import com.proyecto.concesionarios.entity.Modelo;
 import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -213,6 +219,95 @@ public class ModeloRestController {
     @GetMapping("all")
     public List<Modelo> getAllModelosWithCoches() {
         return modeloRepository.findAllModelos();
+    }
+
+    @PostMapping("/modelos/search")
+    public ResponseEntity<?> searchModelos(@RequestBody SearchRequestDTO request) {
+        try {
+            // Validar el tamaño de la página
+            int pageSize = request.getPage().getPageSize();
+            if (pageSize <= 0) {
+                return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+            }
+
+            // Construir criterios de orden
+            Sort sort = buildSortCriteria(request.getListOrderCriteria());
+
+            // Construir criterios de búsqueda
+            Specification<Modelo> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+            // Paginación
+            Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+            // Realizar la búsqueda paginada
+            Page<Modelo> modelosPage = modeloRepository.findAll(spec, pageable);
+
+            // Mapear los resultados a ModeloDTO
+            Page<ModeloDTO> modelosDTOPage = modelosPage.map(modelo -> new ModeloDTO(
+                    modelo.getId(),
+                    modelo.getNombre(),
+                    modelo.getTipoCoche(),
+                    modelo.getAnyoLanzamiento(),
+                    modelo.getMarca().getId()
+            ));
+
+            return new ResponseEntity<>(modelosDTOPage, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+        List<Sort.Order> orders = new ArrayList<>();
+        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        }
+        return Sort.by(orders);
+    }
+
+    /*private Specification<Modelo> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                if (searchCriteria.getKey().equals("nombre")) {
+                    predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                } else if (searchCriteria.getKey().equals("tipoCoche")) {
+                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                } else if (searchCriteria.getKey().equals("anyoLanzamiento")) {
+                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), Integer.parseInt(searchCriteria.getValue())));
+                }
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }*/
+
+    private Specification<Modelo> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                switch (searchCriteria.getKey()) {
+                    case "nombre", "tipoCoche" -> {
+                        if (searchCriteria.getOperation().equals("like")) {
+                            predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                        } else if (searchCriteria.getOperation().equals("equal")) {
+                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        }
+                    }
+                    case "anyoLanzamiento" -> {
+                        int year = Integer.parseInt(searchCriteria.getValue());
+                        switch (searchCriteria.getOperation()) {
+                            case "greater_than" ->
+                                    predicates.add(cb.greaterThan(root.get(searchCriteria.getKey()), year));
+                            case "equal" -> predicates.add(cb.equal(root.get(searchCriteria.getKey()), year));
+                            case "lower_than" -> predicates.add(cb.lessThan(root.get(searchCriteria.getKey()), year));
+                        }
+                    }
+                }
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
     }
 }
 
