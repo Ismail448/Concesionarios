@@ -266,22 +266,6 @@ public class ModeloRestController {
         return Sort.by(orders);
     }
 
-    /*private Specification<Modelo> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
-                if (searchCriteria.getKey().equals("nombre")) {
-                    predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
-                } else if (searchCriteria.getKey().equals("tipoCoche")) {
-                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
-                } else if (searchCriteria.getKey().equals("anyoLanzamiento")) {
-                    predicates.add(cb.equal(root.get(searchCriteria.getKey()), Integer.parseInt(searchCriteria.getValue())));
-                }
-            }
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-    }*/
-
     private Specification<Modelo> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();

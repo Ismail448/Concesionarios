@@ -1,8 +1,8 @@
 package com.proyecto.concesionarios;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyecto.concesionarios.controller.ConcesionarioRestController;
 import com.proyecto.concesionarios.dto.ConcesionarioDTO;
+import com.proyecto.concesionarios.dto.SearchRequestDTO;
 import com.proyecto.concesionarios.entity.Concesionario;
 import com.proyecto.concesionarios.repository.ConcesionarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,18 +13,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -163,4 +166,50 @@ public class ConcesionarioRestControllerTest {
         // Verificar que se llame al método findAllWithMarcas del repositorio
         verify(concesionarioRepository, times(1)).findAllWithMarcas();
     }
+
+    @Test
+    void testSearchConcesionarios() {
+        // Mock de datos de solicitud
+        SearchRequestDTO.PageDTO pageDTO = new SearchRequestDTO.PageDTO(0, 10);
+        SearchRequestDTO request = new SearchRequestDTO(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                pageDTO
+        );
+
+        // Mock de datos de respuesta
+        Concesionario concesionario = new Concesionario();
+        concesionario.setId(1L);
+        concesionario.setNombre("Concesionario de Prueba");
+        concesionario.setDireccion("Dirección de Prueba");
+        concesionario.setTelefono("123456789");
+        concesionario.setEmail("test@example.com");
+        concesionario.setSitioWeb("www.example.com");
+        PageImpl<Concesionario> page = new PageImpl<>(Collections.singletonList(concesionario));
+
+        // Configuración del mock del repositorio
+        when(concesionarioRepository.findAll((Specification<Concesionario>) any(), any()))
+                .thenReturn(page);
+
+        // Ejecutar el método del controlador
+        ResponseEntity<?> response = concesionarioRestController.searchConcesionarios(request);
+
+        // Verificar la respuesta
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        // Verificar el contenido de la respuesta
+        PageImpl<ConcesionarioDTO> expectedPage = new PageImpl<>(
+                Collections.singletonList(new ConcesionarioDTO(
+                        1L,
+                        "Concesionario de Prueba",
+                        "Dirección de Prueba",
+                        "123456789",
+                        "test@example.com",
+                        "www.example.com"
+                ))
+        );
+        assertEquals(expectedPage, response.getBody());
+    }
 }
+
+

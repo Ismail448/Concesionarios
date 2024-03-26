@@ -20,6 +20,11 @@ public class SearchRequestDTO {
     public static class OrderCriteriaDTO {
         private String sortBy;
         private String valueSortOrder;
+
+        public OrderCriteriaDTO(String sortBy, String valueSortOrder) {
+            this.sortBy = sortBy;
+            this.valueSortOrder = valueSortOrder;
+        }
     }
 
     @Data

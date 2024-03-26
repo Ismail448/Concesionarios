@@ -22,4 +22,6 @@ public class ConcesionarioDTO {
         this.email = email;
         this.sitioWeb = sitioWeb;
     }
+
+
 }
