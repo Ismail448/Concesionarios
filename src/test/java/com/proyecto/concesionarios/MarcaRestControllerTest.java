@@ -112,7 +112,7 @@ public class MarcaRestControllerTest {
         // Arrange
         List<Marca> marcas = new ArrayList<>();
         marcas.add(new Marca());
-        when(marcaRepository.findByNombreContainingAndPaisOrigenContainingAndSitioWebContainingAndTelefonoContainingAndAnyoFundacionContaining(anyString(), anyString(), anyString(), anyString(), anyInt()))
+        when(marcaRepository.findByNombreContainingAndPaisOrigenContainingAndSitioWebContainingAndTelefonoContainingAndAnyoFundacionContaining(anyString(), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(marcas);
 
         // Simular una solicitud de búsqueda de concesionarios con parámetros de consulta
@@ -126,7 +126,7 @@ public class MarcaRestControllerTest {
                 .andExpect(jsonPath("$").isArray());
 
         // Verificar que se llame al método findByNombreContainingAndPaisOrigenContainingAndSitioWebContainingAndTelefonoContainingAndAnyoFundacionContaining del repositorio
-        verify(marcaRepository, times(1)).findByNombreContainingAndPaisOrigenContainingAndSitioWebContainingAndTelefonoContainingAndAnyoFundacionContaining(anyString(), anyString(), anyString(), anyString(), anyInt());
+        verify(marcaRepository, times(1)).findByNombreContainingAndPaisOrigenContainingAndSitioWebContainingAndTelefonoContainingAndAnyoFundacionContaining(anyString(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

@@ -241,6 +241,25 @@ public class CocheRestController {
         return cocheRepository.findAll();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCocheById(@PathVariable Long id) {
+        Optional<Coche> cocheOptional = cocheRepository.findById(id);
+        if (cocheOptional.isPresent()) {
+            Coche coche = cocheOptional.get();
+            CocheDTO cocheDTO = new CocheDTO(
+                    coche.getId(),
+                    coche.getColor(),
+                    coche.getMatricula(),
+                    coche.getPrecio(),
+                    coche.getFechaFabricacion(),
+                    coche.getModelo().getId() 
+            );
+            return ResponseEntity.ok(cocheDTO);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Coche no encontrado por el ID proporcionado");
+        }
+    }
+
 
     @PostMapping("/coches/search")
     public ResponseEntity<?> searchCoches(@RequestBody SearchRequestDTO request) {
@@ -285,8 +304,13 @@ public class CocheRestController {
             List<Predicate> predicates = new ArrayList<>();
             for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
                 switch (searchCriteria.getKey()) {
-                    case "color", "matricula":
-                        predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                    case "matricula", "color":
+                        String normalizedValue = searchCriteria.getValue().toLowerCase(); // Normaliza el valor de búsqueda
+                        if (searchCriteria.getOperation().equals("contains")) {
+                            predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%")); // Realiza una comparación insensible a mayúsculas y minúsculas
+                        } else if (searchCriteria.getOperation().equals("equal")) {
+                            predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue)); // Realiza una comparación insensible a mayúsculas y minúsculas
+                        }
                         break;
                     case "precio", "fechaFabricacion":
                         switch (searchCriteria.getOperation()) {

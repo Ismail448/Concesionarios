@@ -330,7 +330,7 @@ public class MarcaRestController {
                     paisOrigen != null ? paisOrigen : "",
                     sitioWeb != null ? sitioWeb : "",
                     telefono != null ? telefono : "",
-                    Integer.parseInt(anyoFundacion != null ? anyoFundacion : "")
+                    anyoFundacion != null ? anyoFundacion : ""
             );
         } else {
             marcas = marcaRepository.findAll();
@@ -360,6 +360,26 @@ public class MarcaRestController {
         }
         return marcas;
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getMarcaById(@PathVariable Long id) {
+        Optional<Marca> marcaOptional = marcaRepository.findById(id);
+        if (marcaOptional.isPresent()) {
+            Marca marca = marcaOptional.get();
+            MarcaDTO marcaDTO = new MarcaDTO(
+                    marca.getId(),
+                    marca.getNombre(),
+                    marca.getPaisOrigen(),
+                    marca.getSitioWeb(),
+                    marca.getTelefono(),
+                    marca.getAnyoFundacion()
+            );
+            return ResponseEntity.ok(marcaDTO);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Marca no encontrada por el ID proporcionado");
+        }
+    }
+
 
     @PostMapping("/marcas/search")
     public ResponseEntity<?> searchMarcas(@RequestBody SearchRequestDTO request) {
@@ -413,11 +433,13 @@ public class MarcaRestController {
             for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
                 switch (searchCriteria.getKey()) {
                     case "nombre", "sitioWeb", "telefono" -> {
-                        if (searchCriteria.getOperation().equals("like")) {
-                            predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                        String normalizedValue = searchCriteria.getValue().toLowerCase();
+                        if (searchCriteria.getOperation().equals("contains")) {
+                            predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
                         } else if (searchCriteria.getOperation().equals("equal")) {
-                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                            predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
                         }
+                        break;
                     }
                     case "paisOrigen" -> {
                         if (searchCriteria.getOperation().equals("equal")) {

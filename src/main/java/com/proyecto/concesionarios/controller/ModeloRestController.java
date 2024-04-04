@@ -221,6 +221,25 @@ public class ModeloRestController {
         return modeloRepository.findAllModelos();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getModeloById(@PathVariable Long id) {
+        Optional<Modelo> modeloOptional = modeloRepository.findById(id);
+        if (modeloOptional.isPresent()) {
+            Modelo modelo = modeloOptional.get();
+            ModeloDTO modeloDTO = new ModeloDTO(
+                    modelo.getId(),
+                    modelo.getNombre(),
+                    modelo.getTipoCoche(),
+                    modelo.getAnyoLanzamiento(),
+                    modelo.getMarca().getId()
+            );
+            return ResponseEntity.ok(modeloDTO);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Modelo no encontrado por el ID proporcionado");
+        }
+    }
+
+
     @PostMapping("/modelos/search")
     public ResponseEntity<?> searchModelos(@RequestBody SearchRequestDTO request) {
         try {
@@ -253,7 +272,6 @@ public class ModeloRestController {
 
             return new ResponseEntity<>(modelosDTOPage, HttpStatus.OK);
         } catch (Exception e) {
-            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -273,10 +291,11 @@ public class ModeloRestController {
             for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
                 switch (searchCriteria.getKey()) {
                     case "nombre", "tipoCoche" -> {
-                        if (searchCriteria.getOperation().equals("like")) {
-                            predicates.add(cb.like(root.get(searchCriteria.getKey()), "%" + searchCriteria.getValue() + "%"));
+                        String normalizedValue = searchCriteria.getValue().toLowerCase();
+                        if (searchCriteria.getOperation().equals("contains")) {
+                            predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
                         } else if (searchCriteria.getOperation().equals("equal")) {
-                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                            predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
                         }
                     }
                     case "anyoLanzamiento" -> {

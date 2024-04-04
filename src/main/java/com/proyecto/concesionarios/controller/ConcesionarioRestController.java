@@ -337,6 +337,27 @@ public class ConcesionarioRestController {
         return concesionarios;
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getConcesionarioById(@PathVariable Long id) {
+        Optional<Concesionario> concesionarioOptional = concesionarioRepository.findById(id);
+        if (concesionarioOptional.isPresent()) {
+            Concesionario concesionario = concesionarioOptional.get();
+            ConcesionarioDTO concesionarioDTO = new ConcesionarioDTO(
+                    concesionario.getId(),
+                    concesionario.getNombre(),
+                    concesionario.getDireccion(),
+                    concesionario.getTelefono(),
+                    concesionario.getEmail(),
+                    concesionario.getSitioWeb()
+            );
+            return ResponseEntity.ok(concesionarioDTO);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Concesionario no encontrado por el ID proporcionado");
+        }
+    }
+
+
+
     @PostMapping("/concesionarios/search")
     public ResponseEntity<?> searchConcesionarios(@RequestBody SearchRequestDTO request) {
         try {
@@ -389,7 +410,12 @@ public class ConcesionarioRestController {
             for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
                 switch (searchCriteria.getKey()) {
                     case "nombre", "direccion", "telefono", "email", "sitioWeb":
-                        predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
+                        String normalizedValue = searchCriteria.getValue().toLowerCase();
+                        if (searchCriteria.getOperation().equals("contains")) {
+                            predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
+                        } else if (searchCriteria.getOperation().equals("equal")) {
+                            predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
+                        }
                         break;
                 }
             }
