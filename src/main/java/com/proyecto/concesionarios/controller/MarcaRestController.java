@@ -418,11 +418,11 @@ public class MarcaRestController {
         }
     }
 
-    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+    private Sort buildSortCriteria (List < SearchRequestDTO.OrderCriteriaDTO > listOrderCriteria) {
         List<Sort.Order> orders = new ArrayList<>();
         for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
-            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
-            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+            Sort.Direction direction = orderCriteria.getValueSortOrder().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getSortBy()));
         }
         return Sort.by(orders);
     }
@@ -432,18 +432,12 @@ public class MarcaRestController {
             List<Predicate> predicates = new ArrayList<>();
             for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
                 switch (searchCriteria.getKey()) {
-                    case "nombre", "sitioWeb", "telefono" -> {
+                    case "nombre", "sitioWeb", "telefono", "paisOrigen" -> {
                         String normalizedValue = searchCriteria.getValue().toLowerCase();
                         if (searchCriteria.getOperation().equals("contains")) {
                             predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
                         } else if (searchCriteria.getOperation().equals("equal")) {
                             predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
-                        }
-                        break;
-                    }
-                    case "paisOrigen" -> {
-                        if (searchCriteria.getOperation().equals("equal")) {
-                            predicates.add(cb.equal(root.get(searchCriteria.getKey()), searchCriteria.getValue()));
                         }
                     }
                     case "anyoFundacion" -> {

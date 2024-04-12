@@ -10,7 +10,6 @@ import com.proyecto.concesionarios.repository.CocheRepository;
 import com.proyecto.concesionarios.repository.MarcaRepository;
 import com.proyecto.concesionarios.repository.ModeloRepository;
 import jakarta.persistence.criteria.Predicate;
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -242,76 +241,80 @@ public class ModeloRestController {
 
     @PostMapping("/modelos/search")
     public ResponseEntity<?> searchModelos(@RequestBody SearchRequestDTO request) {
-        try {
-            // Validar el tamaño de la página
-            int pageSize = request.getPage().getPageSize();
-            if (pageSize <= 0) {
-                return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+            try {
+                // Validar el tamaño de la página
+                int pageSize = request.getPage().getPageSize();
+                if (pageSize <= 0) {
+                    return ResponseEntity.badRequest().body("El tamaño de la página debe ser mayor que cero.");
+                }
+
+                // Construir criterios de orden
+                Sort sort = buildSortCriteria(request.getListOrderCriteria());
+
+                // Construir criterios de búsqueda
+                Specification<Modelo> spec = buildSearchCriteria(request.getListSearchCriteria());
+
+                // Paginación
+                Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
+
+                // Realizar la búsqueda paginada
+                Page<Modelo> modelosPage = modeloRepository.findAll(spec, pageable);
+
+                // Mapear los resultados a ModeloDTO
+                Page<ModeloDTO> modelosDTOPage = modelosPage.map(modelo -> {
+                    Long marcaId = modelo.getMarca() != null ? modelo.getMarca().getId() : null;
+                    return new ModeloDTO(
+                            modelo.getId(),
+                            modelo.getNombre(),
+                            modelo.getTipoCoche(),
+                            modelo.getAnyoLanzamiento(),
+                            marcaId
+                    );
+                });
+
+                return new ResponseEntity<>(modelosDTOPage, HttpStatus.OK);
+            } catch (Exception e) {
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
-
-            // Construir criterios de orden
-            Sort sort = buildSortCriteria(request.getListOrderCriteria());
-
-            // Construir criterios de búsqueda
-            Specification<Modelo> spec = buildSearchCriteria(request.getListSearchCriteria());
-
-            // Paginación
-            Pageable pageable = PageRequest.of(request.getPage().getPageIndex(), request.getPage().getPageSize(), sort);
-
-            // Realizar la búsqueda paginada
-            Page<Modelo> modelosPage = modeloRepository.findAll(spec, pageable);
-
-            // Mapear los resultados a ModeloDTO
-            Page<ModeloDTO> modelosDTOPage = modelosPage.map(modelo -> new ModeloDTO(
-                    modelo.getId(),
-                    modelo.getNombre(),
-                    modelo.getTipoCoche(),
-                    modelo.getAnyoLanzamiento(),
-                    modelo.getMarca().getId()
-            ));
-
-            return new ResponseEntity<>(modelosDTOPage, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-    }
 
-    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
-        List<Sort.Order> orders = new ArrayList<>();
-        for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
-            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
-            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+        private Sort buildSortCriteria (List < SearchRequestDTO.OrderCriteriaDTO > listOrderCriteria) {
+            List<Sort.Order> orders = new ArrayList<>();
+            for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
+                Sort.Direction direction = orderCriteria.getValueSortOrder().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+                orders.add(new Sort.Order(direction, orderCriteria.getSortBy()));
+            }
+            return Sort.by(orders);
         }
-        return Sort.by(orders);
-    }
 
-    private Specification<Modelo> buildSearchCriteria(List<SearchRequestDTO.SearchCriteriaDTO> listSearchCriteria) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
-                switch (searchCriteria.getKey()) {
-                    case "nombre", "tipoCoche" -> {
-                        String normalizedValue = searchCriteria.getValue().toLowerCase();
-                        if (searchCriteria.getOperation().equals("contains")) {
-                            predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
-                        } else if (searchCriteria.getOperation().equals("equal")) {
-                            predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
+        private Specification<Modelo> buildSearchCriteria
+        (List < SearchRequestDTO.SearchCriteriaDTO > listSearchCriteria) {
+            return (root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                for (SearchRequestDTO.SearchCriteriaDTO searchCriteria : listSearchCriteria) {
+                    switch (searchCriteria.getKey()) {
+                        case "nombre", "tipoCoche" -> {
+                            String normalizedValue = searchCriteria.getValue().toLowerCase();
+                            if (searchCriteria.getOperation().equals("contains")) {
+                                predicates.add(cb.like(cb.lower(root.get(searchCriteria.getKey())), "%" + normalizedValue + "%"));
+                            } else if (searchCriteria.getOperation().equals("equal")) {
+                                predicates.add(cb.equal(cb.lower(root.get(searchCriteria.getKey())), normalizedValue));
+                            }
                         }
-                    }
-                    case "anyoLanzamiento" -> {
-                        int year = Integer.parseInt(searchCriteria.getValue());
-                        switch (searchCriteria.getOperation()) {
-                            case "greater_than" ->
-                                    predicates.add(cb.greaterThan(root.get(searchCriteria.getKey()), year));
-                            case "equal" -> predicates.add(cb.equal(root.get(searchCriteria.getKey()), year));
-                            case "lower_than" -> predicates.add(cb.lessThan(root.get(searchCriteria.getKey()), year));
+                        case "anyoLanzamiento" -> {
+                            int year = Integer.parseInt(searchCriteria.getValue());
+                            switch (searchCriteria.getOperation()) {
+                                case "greater_than" ->
+                                        predicates.add(cb.greaterThan(root.get(searchCriteria.getKey()), year));
+                                case "equal" -> predicates.add(cb.equal(root.get(searchCriteria.getKey()), year));
+                                case "lower_than" ->
+                                        predicates.add(cb.lessThan(root.get(searchCriteria.getKey()), year));
+                            }
                         }
                     }
                 }
-            }
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-    }
+                return cb.and(predicates.toArray(new Predicate[0]));
+            };
+        }
 }
 

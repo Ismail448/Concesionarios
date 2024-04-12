@@ -290,11 +290,11 @@ public class CocheRestController {
         }
     }
 
-    private Sort buildSortCriteria(List<SearchRequestDTO.OrderCriteriaDTO> listOrderCriteria) {
+    private Sort buildSortCriteria (List < SearchRequestDTO.OrderCriteriaDTO > listOrderCriteria) {
         List<Sort.Order> orders = new ArrayList<>();
         for (SearchRequestDTO.OrderCriteriaDTO orderCriteria : listOrderCriteria) {
-            Sort.Direction direction = orderCriteria.getSortBy().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
-            orders.add(new Sort.Order(direction, orderCriteria.getValueSortOrder()));
+            Sort.Direction direction = orderCriteria.getValueSortOrder().equalsIgnoreCase("ASC") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            orders.add(new Sort.Order(direction, orderCriteria.getSortBy()));
         }
         return Sort.by(orders);
     }
